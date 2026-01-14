@@ -6,9 +6,8 @@ syms x a b;
 gamma = sym(zeros(1, N));
 
 if strcmpi(bcType, 'hinged')
-    % BCs: S(0) = 0, S''(0) = 0 (Pin) | S''(1) = 0, S'''(1) = 0 (Free)
 
-    % Mode 1: Rigid body mode S(x) = x satisfies all 4 CCs
+    % Mode 1: Rigid body mode satisfies all 4 CCs
     gamma(1) = x;
 
     % Higher modes: x^n + a*x^(n+1) + b*x^(n+2)
@@ -28,7 +27,6 @@ if strcmpi(bcType, 'hinged')
     end
 
 elseif strcmpi(bcType, 'cantilevered')
-    % BCs: S(0) = 0, S'(0) = 0 (Clamped) | S''(1) = 0, S'''(1) = 0 (Free)
 
     % Starting from n=2 ensures S(0)=0 and S'(0)=0
     for i = 1:N

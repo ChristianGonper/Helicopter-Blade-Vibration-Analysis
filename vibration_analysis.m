@@ -1,11 +1,11 @@
-%% Helipcopter Blade Vibration Analysis Script
+%% Helipcopter Blade Vibration Analysis
 % Author: Christian Gonzalez Perez
 % Date: 2026-01
 
 clear; clc; close all;
 
 %% 1. Parameters Definition
-chi = 30; % Assigned ID card value
+chi = 30; % ID card parameter
 R = 6.25; % Blade Radius [m]
 m0 = 6.05e-2; % Linear mass [kg/m]
 E = 5e10; % Young Modulus [N/m^2]
@@ -13,15 +13,15 @@ RPM = 250 + (chi / 10);
 Omega_val = RPM * (2 * pi / 60); % Rotation speed [rad/s]
 
 sigma = 0.05; % Solidity
-Nb = 4;       % Assuming 4 blades (standard for this R)
-chord = (sigma * pi * R) / Nb; % Blade chord [m]
-t = 0.12 * chord; % For a NACA 0012 profile, max thickness is t = 0.12 * chord
-I0 = 0.04 * chord * t^3; % Approx Area Moment of Inertia for aerodynamic section (I ~ 0.04 * c * t^3)
+Nb = 4;       % Assuming 4 blades
+c = (sigma * pi * R) / Nb; % Blade chord [m]
+t = 0.12 * c; % NACA 0012 profile thickness
+I0 = 0.04 * c * t^3; % Area Moment of Inertia for aerodynamic section
 EI0 = E * I0; % Structural stiffness [N*m^2]
 
+syms x y;
 N_modes = 4; % Number of assumed modes
 x_grid = linspace(0, 1, 101);   % Discretization of the blade
-syms x y;
 
 %% 2. Cases Setup
 distributions= {'Uniform', 'Non_Uniform'};
@@ -64,21 +64,17 @@ for d = 1:length(distributions)
             [M_sym, K_sym] = assembleMK(gamma, m_dist, EI_dist, G, R);
 
             % Convert to numeric for eigenvalue solving
-            M_num = double(subs(M_sym, x, 0)); % No integrals to evaluate but eliminate symbolics
-            K_num = double(subs(K_sym, x, 0));
+            M_num = double(M_sym);
+            K_num = double(K_sym);
 
-            % Solve generalized eigenvalue problem: K*v = omega^2 * M*v
+            % Solve generalized eigenvalue problem
             [vecs, vals] = eig(K_num, M_num); % Eigenvectors in columns
             omega2 = diag(vals); % Natural frequencies squared
 
-            % Sort and filter positive real frequencies
-            [omega2_sorted, idx] = sort(real(omega2));
+            [omega2_sorted, idx] = sort(real(omega2)); % Sort frequencies
             vecs_sorted = vecs(:, idx); % Sort the modes
 
-            % Selection of the 4 frequencies
-            % Filter out very small values (rigid body modes or numerical noise)
-            % For hinged, include the rigid mode (should be ~0 if non-rotating, or ~Omega if rotating)
-            selected_omega = sqrt(max(0, omega2_sorted(1:N_modes)));
+            selected_omega = sqrt(omega2_sorted(1:N_modes));
             selected_vecs = vecs_sorted(:, 1:N_modes);
 
             % Store results
@@ -147,5 +143,5 @@ function G = buildG(m_sym, Omega, R)
 % Omega, R: scalars
 
 syms x y;
-G = Omega^2 * R^2 * int(m_sym * y, y, x, 1);
+G = Omega^2 * R^2 * int(subs(m_sym, x, y) * y, y, x, 1);
 end
