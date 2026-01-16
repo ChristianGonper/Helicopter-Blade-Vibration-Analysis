@@ -5,7 +5,7 @@
 clear; clc; close all;
 
 %% 1. Parameters Definition
-chi = 30; % ID card parameter
+chi = 0; % ID card parameter, 00
 R = 6.25; % Blade Radius [m]
 m0 = 6.05e-2; % Linear mass [kg/m]
 E = 5e10; % Young Modulus [N/m^2]
@@ -111,9 +111,60 @@ plotComparative(results, 'Uniform', 'cantilevered', x_grid);
 plotComparative(results, 'Non_Uniform', 'hinged', x_grid);
 % Figure 4: Non-Uniform Case - Cantilevered
 plotComparative(results, 'Non_Uniform', 'cantilevered', x_grid);
+
+%% 5. Comparative Analysis Figures
+
+% Figure 5: Uniform vs Non-Uniform (Hinged - Rotating)
+plotCrossComparative(results, 'Uniform_hinged_Rotating', 'Non_Uniform_hinged_Rotating', ...
+    'Uniform', 'Non-Uniform', 'Effect of Mass Distribution (Hinged)', x_grid);
+
+% Figure 6: Uniform vs Non-Uniform (Cantilevered - Rotating)
+plotCrossComparative(results, 'Uniform_cantilevered_Rotating', 'Non_Uniform_cantilevered_Rotating', ...
+    'Uniform', 'Non-Uniform', 'Effect of Mass Distribution (Cantilevered)', x_grid);
+
+% Figure 7: Hinged vs Cantilevered (Uniform - Rotating)
+plotCrossComparative(results, 'Uniform_hinged_Rotating', 'Uniform_cantilevered_Rotating', ...
+    'Hinged', 'Cantilevered', 'Effect of Boundary Conditions (Uniform)', x_grid);
+
+% Figure 8: Hinged vs Cantilevered (Non-Uniform - Rotating)
+plotCrossComparative(results, 'Non_Uniform_hinged_Rotating', 'Non_Uniform_cantilevered_Rotating', ...
+    'Hinged', 'Cantilevered', 'Effect of Boundary Conditions (Non-Uniform)', x_grid);
+
 fprintf('\nAnalysis Complete.\n');
 
-%% Helper: Plotting Function
+%% 6. Export Results to CSV
+fprintf('Exporting frequencies to "frecuencias_naturales.csv"...\n');
+
+% Helper to extract Hz from results struct
+getHz = @(name) results.(name).frequencies / (2*pi);
+
+% Columns organized to ease LaTeX table creation
+csv_data = [
+    (1:N_modes)', ...                                    % Mode
+    getHz('Uniform_hinged_NonRotating'), ...             % 1. Unif Hinged 0
+    getHz('Uniform_hinged_Rotating'), ...                % 2. Unif Hinged Omega
+    getHz('Uniform_cantilevered_NonRotating'), ...       % 3. Unif Cant 0
+    getHz('Uniform_cantilevered_Rotating'), ...          % 4. Unif Cant Omega
+    getHz('Non_Uniform_hinged_NonRotating'), ...         % 5. NonUnif Hinged 0
+    getHz('Non_Uniform_hinged_Rotating'), ...            % 6. NonUnif Hinged Omega
+    getHz('Non_Uniform_cantilevered_NonRotating'), ...   % 7. NonUnif Cant 0
+    getHz('Non_Uniform_cantilevered_Rotating')           % 8. NonUnif Cant Omega
+];
+
+% Create Table with headers
+T = array2table(csv_data, 'VariableNames', { ...
+    'Mode', ...
+    'Unif_Hinged_0', 'Unif_Hinged_Rot', ...
+    'Unif_Cant_0',   'Unif_Cant_Rot', ...
+    'NonUnif_Hinged_0', 'NonUnif_Hinged_Rot', ...
+    'NonUnif_Cant_0',   'NonUnif_Cant_Rot' ...
+});
+
+% Write to file
+writetable(T, 'frecuencias_naturales.csv');
+fprintf('Export successful. File saved as frequencies_naturales.csv\n');
+
+%% Helper: Plotting Functions
 function plotComparative(results, dist, bc, x_grid)
 caseRot = sprintf('%s_%s_Rotating', dist, bc);
 caseNon = sprintf('%s_%s_NonRotating', dist, bc);
@@ -136,6 +187,27 @@ for i = 1:N_modes
 end
 sgtitle(sprintf('%s Blade - %s', dist, bc),'Interpreter','none');
 end
+
+function plotCrossComparative(results, id1, id2, label1, label2, titleStr, x_grid)
+figure('Name', titleStr, 'NumberTitle', 'off');
+N_modes = 4;
+
+for i = 1:N_modes
+    subplot(2, 2, i);
+    plot(x_grid, results.(id1).modes(i,:), 'b--', 'LineWidth', 2);
+    hold on;
+    plot(x_grid, results.(id2).modes(i,:), 'r-', 'LineWidth', 1);
+    grid on;
+    title(sprintf('Mode %d', i));
+    legend(sprintf('%s (f=%.2f Hz)', label1, results.(id1).frequencies(i)/(2*pi)), ...
+           sprintf('%s (f=%.2f Hz)', label2, results.(id2).frequencies(i)/(2*pi)), ...
+           'Location', 'best');
+    if i > 2, xlabel('x/R'); end
+    if mod(i, 2) ~= 0, ylabel('Deflection'); end
+end
+sgtitle(titleStr, 'Interpreter', 'none');
+end
+
 %% Centrifugal Tension Function
 function G = buildG(m_sym, Omega, R)
 % buildG: Calculates centrifugal tension G(x)
